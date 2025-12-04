@@ -1,15 +1,22 @@
 #pydantic schema
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, validator
 from datetime import date
 from typing import Optional
 
 class TrialBase(BaseModel):
-    name: str
-    phase: str
-    description: str | None = None
+    name: str = Field(min_length=1,max_length= 50)
+    phase: str = Field(pattern=r"^(1|2|3|4)$")
+    description: str | None = Field(None, max_length= 500)
     start_date: date | None = None
     end_date: date | None = None
+
+    @validator("end_date")
+    def end_after_start(cls, v, values):
+        start= values.get("start_date")
+        if start and v and v < start:
+            raise ValueError("end_date must be after start_date")
+        return v
 
 class TrialCreate(TrialBase):
     pass 
