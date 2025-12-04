@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.api.crud.trials import create_trial, get_trials, get_trial_by_id, update_trial, delete_trial
@@ -77,3 +77,40 @@ def delete_participant_endpoint(participant_id: int, db: Session = Depends(get_d
     if not participant:
         raise HTTPException(status_code=404, detail="Participant not found")
     return {"detail": "Participant deleted"}
+
+@api_router.get("/trials/filter")
+def list_trials_filtered(
+    phase: str | None = None,
+    name: str | None = None,
+    description: str | None = None,
+    search: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+    db: Session = Depends(get_db)
+):
+    filters = {
+        "phase": phase,
+        "name": name,
+        "description": description
+    }
+    return get_trials(db, filters= filters, search= search, limit= limit, offset= offset)
+
+@api_router.get("/participants/filter")
+def list_participants_filtered(
+    first_name: str | None = None,
+    last_name: str | None = None,
+    age: int | None = None,
+    trial_id: int | None = None,
+    search: str | None = None,
+    limit: int = Query(100),
+    offset: int = Query(0),
+    db: Session = Depends(get_db)
+):
+    filters = {
+        "first_name": first_name,
+        "last_name": last_name,
+        "age": age,
+        "trial_id": trial_id
+    }
+
+    return get_participants(db, filters=filters, search=search, limit=limit, offset=offset)
