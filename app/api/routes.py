@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
-from app.api.crud.trials import create_trial, get_trials
-from app.schemas.trial import TrialCreate, Trial
-from app.api.crud.participant import create_participant, get_participants
-from app.schemas.participant import ParticipantCreate, Participant
-from app.db.models.trial import Trial as TrialModel
+from app.api.crud.trials import create_trial, get_trials, get_trial_by_id, update_trial, delete_trial
+from app.schemas.trial import TrialCreate, Trial, TrialUpdate
+from app.api.crud.participant import create_participant, get_participants, get_participants_by_trial, update_participant, delete_participant
+from app.schemas.participant import ParticipantCreate, Participant, ParticipantUpdate
 
 api_router= APIRouter()
 
@@ -36,7 +35,45 @@ def create_participant_endpoint(participant: ParticipantCreate, db: Session = De
 def get_participants_endpoint(db: Session = Depends(get_db)):
     return get_participants(db)
 
-@api_router.get("/trials/{trial_id}", response_model=Trial)
-def get_trial_by_id(trial_id: int, db: Session = Depends(get_db)):
-    trial= db.query(TrialModel).filter(TrialModel.id == trial_id).first()
+@api_router.get("/trials/{trial_id}/participants", response_model= list[Participant])
+def get_participants_for_trial(trial_id : int, db: Session = Depends(get_db)):
+    trial= get_trial_by_id(db, trial_id)
+    if not trial:
+        raise HTTPException(status_code=404, detail="Trial not found")
+    return get_participants_by_trial(db, trial_id)
+
+@api_router.put("/trials/{trial_id}", response_model=Trial)
+def update_trial_endpoint(
+    trial_id: int,
+    trial_data: TrialUpdate,
+    db: Session = Depends(get_db)
+):
+    trial= update_trial(db, trial_id, trial_data)
+    if not trial:
+        raise HTTPException(status_code=404, detail="Trial not found")
     return trial
+
+@api_router.put("/participants/{participant_id}", response_model=Participant)
+def update_participant_endpoint(
+    participant_id: int,
+    participant_data: ParticipantUpdate,
+    db: Session = Depends(get_db)
+):
+    participant= update_participant(db, participant_id, participant_data)
+    if not participant:
+        raise HTTPException(status_code=404, detail="Participant not found")
+    return participant
+
+@api_router.delete("/trials/{trial_id}")
+def delete_trial_endpoint(trial_id: int, db: Session = Depends(get_db)):
+    trial = delete_trial(db, trial_id)
+    if not trial:
+        raise HTTPException(status_code=404, detail="Trial not found")
+    return {"detail": "Trial deleted"}
+
+@api_router.delete("/participants/{participant_id}")
+def delete_participant_endpoint(participant_id: int, db: Session = Depends(get_db)):
+    participant = delete_participant(db, participant_id)
+    if not participant:
+        raise HTTPException(status_code=404, detail="Participant not found")
+    return {"detail": "Participant deleted"}
